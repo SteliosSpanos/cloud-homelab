@@ -37,3 +37,17 @@ variable "private_subnet_2_cidr" {
   default     = "10.0.3.0/24"
   description = "Private subnet 2 CIDR block"
 }
+
+variable "instance_types" {
+  type = object({
+    jump_box = string
+    nat      = string
+    main_vm  = string
+  })
+  default = {
+    jump_box = "t3.micro"
+    nat      = "t3.micro"
+    main_vm  = "t3.micro"
+  }
+  description = "EC2 instance types for each instance"
+}
