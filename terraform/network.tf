@@ -54,7 +54,7 @@ resource "aws_internet_gateway" "homelab_igw" {
   vpc_id = aws_vpc.homelab_vpc.id
 
   tags = {
-    Name = "${project_name}-igw"
+    Name = "${var.project_name}-igw"
   }
 }
 
@@ -80,17 +80,17 @@ resource "aws_route_table" "homelab_private_rt" {
 
 resource "aws_route_table_association" "homelab_public_assoc" {
   subnet_id      = aws_subnet.homelab_public_subnet.id
-  route_table_id = aws_route_table.homelab_public_rt
+  route_table_id = aws_route_table.homelab_public_rt.id
 }
 
 resource "aws_route_table_association" "homelab_private_assoc_1" {
-  subnet_id      = aws_subnet.homelab_private_subnet_1
-  route_table_id = aws_route_table.homelab_private_rt
+  subnet_id      = aws_subnet.homelab_private_subnet_1.id
+  route_table_id = aws_route_table.homelab_private_rt.id
 }
 
 resource "aws_route_table_association" "homelab_private_assoc_2" {
-  subnet_id      = aws_subnet.homelab_private_subnet_2
-  route_table_id = aws_route_table.homelab_private_rt
+  subnet_id      = aws_subnet.homelab_private_subnet_2.id
+  route_table_id = aws_route_table.homelab_private_rt.id
 }
 
 
