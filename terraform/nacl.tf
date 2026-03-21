@@ -110,7 +110,7 @@ resource "aws_network_acl_rule" "public_outbound_ssh_to_private" {
   egress         = true
   protocol       = "tcp"
   rule_action    = "allow"
-  cidr_block     = aws_subnet.homelab_private_subnet_1.cidr_block
+  cidr_block     = var.vpc_cidr
   from_port      = 22
   to_port        = 22
 }
