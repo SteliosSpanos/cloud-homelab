@@ -155,14 +155,6 @@ resource "local_file" "ssh_config" {
         ProxyJump jump-box
         StrictHostKeyChecking accept-new
         UserKnownHostsFile ${path.module}/.ssh/known_hosts
-
-    Host web-app
-        HostName ${aws_instance.web_app.private_ip}
-        User ec2-user
-        IdentityFile ${abspath("${path.module}/.ssh/${var.project_name}-key.pem")}
-        ProxyJump jump-box
-        StrictHostKeyChecking accept-new
-        UserKnownHostsFile ${path.module}/.ssh/known_hosts
   EOF
 
   filename        = "${path.module}/.ssh/config"
