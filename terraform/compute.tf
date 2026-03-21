@@ -7,7 +7,7 @@
 
 resource "aws_key_pair" "homelab_key" {
   key_name   = "${var.project_name}-key"
-  public_key = file("${path.module}/.ssh/homelab-key.pub")
+  public_key = file("${path.module}/.ssh/cloud-homelab-key.pem.pub")
 
   tags = {
     Name = "${var.project_name}-key"
@@ -36,8 +36,8 @@ resource "aws_instance" "nat_instance" {
   }
 
   user_data = templatefile("${path.module}/templates/userdata.tpl", {
-    private_subnet_1_cidr = aws_subnet.homelab_private_subnet_1.cidr_block,
-    private_subnet_2_cidr = aws_subnet.private_subnet_2.cidr_block
+    private_subnet_cidr   = aws_subnet.homelab_private_subnet_1.cidr_block,
+    private_subnet_2_cidr = aws_subnet.homelab_private_subnet_2.cidr_block
     log_group_name        = aws_cloudwatch_log_group.nat_instance.name
   })
   user_data_replace_on_change = true
@@ -114,7 +114,7 @@ resource "aws_instance" "main_vm" {
 
   root_block_device {
     encrypted  = true
-    kms_key_id = aws_kms_alias.homelab.arn
+    kms_key_id = aws_kms_key.homelab.arn
   }
 
   user_data = templatefile("${path.module}/templates/userdata-main-vm.tpl", {
