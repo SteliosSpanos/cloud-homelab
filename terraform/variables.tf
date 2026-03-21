@@ -51,3 +51,9 @@ variable "instance_types" {
   }
   description = "EC2 instance types for each instance"
 }
+
+variable "log_retention_days" {
+  type        = number
+  default     = 30
+  description = "CloudWatch log retention in days"
+}
