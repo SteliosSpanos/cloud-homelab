@@ -15,8 +15,8 @@ resource "aws_network_acl" "public" {
 resource "aws_network_acl" "private" {
   vpc_id = aws_vpc.homelab_vpc.id
   subnet_ids = [
-    aws_subnet.homelab_private_subnet_1,
-    aws_subnet.homelab_private_subnet_2
+    aws_subnet.homelab_private_subnet_1.id,
+    aws_subnet.homelab_private_subnet_2.id
   ]
 
   tags = {

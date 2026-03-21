@@ -32,4 +32,14 @@ resource "aws_instance" "nat_instance" {
     encrypted  = true
     kms_key_id = aws_kms_key.homelab.arn
   }
+
+  user_data = templatefile("${path.module}/templates/userdata.tpl", {
+    private_subnet_1_cidr = aws_subnet.homelab_private_subnet_1.cidr_block,
+    private_subnet_2_cidr = aws_subnet.private_subnet_2.cidr_block
+  })
+  user_data_replace_on_change = true
+
+  tags = {
+    Name = "${var.project_name}-nat-instance"
+  }
 }
