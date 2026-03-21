@@ -1,6 +1,6 @@
 /*
   The set-up for 1 VPC, 2 subnets (1 public, 2 private),
-  2 route tables (1 public, 1 private) and 1 IGW
+  2 route tables (1 public, 1 private), 1 IGW and Flow Logs
 */
 
 // VPC
@@ -107,3 +107,16 @@ resource "aws_route" "private_to_nat" {
   network_interface_id   = aws_instance.jump_box.primary_network_interface_id
 }
 
+// VPC Flow Logs
+
+resource "aws_flow_log" "vpc" {
+  vpc_id               = aws_vpc.homelab_vpc.id
+  traffic_type         = "ALL"
+  log_destination_type = "cloud-watch-logs"
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_log.arn
+  iam_role_arn         = aws_iam_role.vpc_flow_log.arn
+
+  tags = {
+    Name = "${var.project_name}-vpc-flow-log"
+  }
+}

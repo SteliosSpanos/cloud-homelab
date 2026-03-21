@@ -16,6 +16,7 @@ resource "aws_iam_policy" "kms_usage" {
         Action = [
           "kms:Encrypt",
           "kms:Decrypt",
+          "kms:ReEncrypt*",
           "kms:GenerateDataKey*",
           "kms:DescribeKey"
         ]
@@ -42,11 +43,6 @@ resource "aws_iam_role" "jump_box" {
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
 }
 
-resource "aws_iam_role_policy_attachment" "jump_box_ssm" {
-  role       = aws_iam_role.jump_box.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
 resource "aws_iam_role_policy_attachment" "jump_box_kms" {
   role       = aws_iam_role.jump_box.name
   policy_arn = aws_iam_policy.kms_usage.arn
@@ -64,11 +60,6 @@ resource "aws_iam_role" "nat_instance" {
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
 }
 
-resource "aws_iam_role_policy_attachment" "nat_instance_ssm" {
-  role       = aws_iam_role.nat_instance.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
 resource "aws_iam_role_policy_attachment" "nat_instance_kms" {
   role       = aws_iam_role.nat_instance.name
   policy_arn = aws_iam_policy.kms_usage.arn
@@ -84,11 +75,6 @@ resource "aws_iam_instance_profile" "nat_instance" {
 resource "aws_iam_role" "main_vm" {
   name               = "${var.project_name}-main-vm-role"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
-}
-
-resource "aws_iam_role_policy_attachment" "main_vm_ssm" {
-  role       = aws_iam_role.main_vm.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_role_policy_attachment" "main_vm_kms" {
