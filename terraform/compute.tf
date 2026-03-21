@@ -1,7 +1,9 @@
 /*
-    The 3 EC2 instances (Jump Box, NAT, Main) and
-    the key pair for SSH
+    The 3 EC2 instances (Jump Box, NAT, Main), the key pair for SSH
+    and the SSH config file for proxy jump
 */
+
+// SSH Key Pair
 
 resource "aws_key_pair" "homelab_key" {
   key_name   = "${var.project_name}-key"
@@ -36,10 +38,133 @@ resource "aws_instance" "nat_instance" {
   user_data = templatefile("${path.module}/templates/userdata.tpl", {
     private_subnet_1_cidr = aws_subnet.homelab_private_subnet_1.cidr_block,
     private_subnet_2_cidr = aws_subnet.private_subnet_2.cidr_block
+    log_group_name        = aws_cloudwatch_log_group.nat_instance.name
   })
   user_data_replace_on_change = true
 
   tags = {
     Name = "${var.project_name}-nat-instance"
   }
+}
+
+resource "aws_eip" "nat_instance" {
+  domain   = "vpc"
+  instance = aws_instance.nat_instance.id
+
+  depends_on = [aws_internet_gateway.homelab_igw]
+
+  tags = {
+    Name = "${var.project_name}-nat-eip"
+  }
+}
+
+// Jump Box
+
+resource "aws_instance" "jump_box" {
+  ami                    = data.aws_ami.amazon_linux_2023.id
+  instance_type          = var.instance_types.jump_box
+  subnet_id              = aws_subnet.homelab_public_subnet.id
+  vpc_security_group_ids = [aws_security_group.jump_box.id]
+  iam_instance_profile   = aws_iam_instance_profile.jump_box.name
+  key_name               = aws_key_pair.homelab_key.key_name
+
+  metadata_options {
+    http_tokens = "required"
+  }
+
+  root_block_device {
+    encrypted  = true
+    kms_key_id = aws_kms_key.homelab.arn
+  }
+
+  user_data = templatefile("${path.module}/templates/userdata-jump-box.tpl", {
+    log_group_name = aws_cloudwatch_log_group.jump_box.name
+  })
+  user_data_replace_on_change = true
+
+  tags = {
+    Name = "${var.project_name}-jump-box"
+  }
+}
+
+resource "aws_eip" "jump_box" {
+  domain   = "vpc"
+  instance = aws_instance.jump_box.id
+
+  depends_on = [aws_internet_gateway.homelab_igw]
+
+  tags = {
+    Name = "${var.project_name}-jump-box-eip"
+  }
+}
+
+// Main VM
+
+resource "aws_instance" "main_vm" {
+  ami                    = data.aws_ami.amazon_linux_2023.id
+  instance_type          = var.instance_types.main_vm
+  subnet_id              = aws_subnet.homelab_private_subnet_1.id
+  vpc_security_group_ids = [aws_security_group.main_vm.id]
+  iam_instance_profile   = aws_iam_instance_profile.main_vm.name
+  key_name               = aws_key_pair.homelab_key.key_name
+
+  metadata_options {
+    http_tokens = "required"
+  }
+
+  root_block_device {
+    encrypted  = true
+    kms_key_id = aws_kms_alias.homelab.arn
+  }
+
+  user_data = templatefile("${path.module}/templates/userdata-main-vm.tpl", {
+    log_group_name = aws_cloudwatch_log_group.main_vm.name
+  })
+  user_data_replace_on_change = true
+
+  tags = {
+    Name = "${var.project_name}-main-vm"
+  }
+}
+
+// SSH Config
+
+resource "local_file" "ssh_config" {
+  content = <<-EOF
+    # Usage: ssh -F .ssh/config jump-box
+
+    Host jump-box
+        HostName ${aws_eip.jump_box.public_ip}
+        User ec2-user
+        IdentityFile ${abspath("${path.module}/.ssh/${var.project_name}-key.pem")}
+        StrictHostKeyChecking accept-new
+        UserKnownHostsFile ${path.module}/.ssh/known_hosts
+
+    Host nat-instance
+        HostName ${aws_instance.nat_instance.private_ip}
+        User ec2-user
+        IdentityFile ${abspath("${path.module}/.ssh/${var.project_name}-key.pem")}
+        ProxyJump jump-box
+        StrictHostKeyChecking accept-new
+        UserKnownHostsFile ${path.module}/.ssh/known_hosts
+
+    Host main-vm
+        HostName ${aws_instance.main_vm.private_ip}
+        User ec2-user
+        IdentityFile ${abspath("${path.module}/.ssh/${var.project_name}-key.pem")}
+        ProxyJump jump-box
+        StrictHostKeyChecking accept-new
+        UserKnownHostsFile ${path.module}/.ssh/known_hosts
+
+    Host web-app
+        HostName ${aws_instance.web_app.private_ip}
+        User ec2-user
+        IdentityFile ${abspath("${path.module}/.ssh/${var.project_name}-key.pem")}
+        ProxyJump jump-box
+        StrictHostKeyChecking accept-new
+        UserKnownHostsFile ${path.module}/.ssh/known_hosts
+  EOF
+
+  filename        = "${path.module}/.ssh/config"
+  file_permission = "0600"
 }

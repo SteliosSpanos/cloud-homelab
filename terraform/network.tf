@@ -101,3 +101,9 @@ resource "aws_route" "route_to_igw" {
   gateway_id             = aws_internet_gateway.homelab_igw.id
 }
 
+resource "aws_route" "private_to_nat" {
+  route_table_id         = aws_route_table.homelab_private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  network_interface_id   = aws_instance.jump_box.primary_network_interface_id
+}
+
