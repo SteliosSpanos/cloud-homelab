@@ -40,14 +40,11 @@ resource "aws_security_group" "nat_instance" {
   }
 
   ingress {
-    description = "ICMP (ping) from private subnets"
-    from_port   = -1
-    to_port     = -1
-    protocol    = "icmp"
-    cidr_blocks = [
-      aws_subnet.homelab_private_subnet_1.cidr_block,
-      aws_subnet.homelab_private_subnet_2.cidr_block
-    ]
+    description     = "ICMP (ping) from jump box"
+    from_port       = -1
+    to_port         = -1
+    protocol        = "icmp"
+    security_groups = [aws_security_group.jump_box.id]
   }
 
   egress {
