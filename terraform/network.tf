@@ -104,7 +104,7 @@ resource "aws_route" "route_to_igw" {
 resource "aws_route" "private_to_nat" {
   route_table_id         = aws_route_table.homelab_private_rt.id
   destination_cidr_block = "0.0.0.0/0"
-  network_interface_id   = aws_instance.jump_box.primary_network_interface_id
+  network_interface_id   = aws_instance.nat_instance.primary_network_interface_id
 }
 
 // VPC Flow Logs
