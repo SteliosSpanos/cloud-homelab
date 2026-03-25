@@ -36,6 +36,8 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
+// EC2 Assume Role Policy
+
 data "aws_iam_policy_document" "ec2_assume_role" {
   statement {
     effect = "Allow"
@@ -46,6 +48,8 @@ data "aws_iam_policy_document" "ec2_assume_role" {
     actions = ["sts:AssumeRole"]
   }
 }
+
+// CloudWatch Logging Policy for Instances
 
 data "aws_iam_policy_document" "cloudwatch_logging" {
   for_each = local.instance_log_groups
@@ -62,6 +66,8 @@ data "aws_iam_policy_document" "cloudwatch_logging" {
     ]
   }
 }
+
+// KMS Key Usage Policy
 
 data "aws_iam_policy_document" "kms_usage" {
   statement {
@@ -90,6 +96,8 @@ data "aws_iam_policy_document" "kms_usage" {
   }
 }
 
+// S3 Access Policy for Instances
+
 data "aws_iam_policy_document" "s3_access" {
   statement {
     effect = "Allow"
@@ -105,6 +113,8 @@ data "aws_iam_policy_document" "s3_access" {
     ]
   }
 }
+
+// VPC Flow Log Assume Role Policy
 
 data "aws_iam_policy_document" "vpc_flow_log_assume_role" {
   statement {
@@ -127,6 +137,8 @@ data "aws_iam_policy_document" "vpc_flow_log_assume_role" {
   }
 }
 
+// VPC Flow Log Policy
+
 data "aws_iam_policy_document" "vpc_flow_log" {
   statement {
     actions = [
@@ -140,6 +152,8 @@ data "aws_iam_policy_document" "vpc_flow_log" {
     resources = ["*"]
   }
 }
+
+// S3 Endpoint Policy (Gateway)
 
 data "aws_iam_policy_document" "s3_endpoint_policy" {
   statement {
@@ -179,5 +193,50 @@ data "aws_iam_policy_document" "s3_endpoint_policy" {
       "arn:aws:s3:::patch-baseline-snapshot-${var.region}/*",
       "arn:aws:s3:::amazoncloudwatch-agent-${var.region}/*"
     ]
+  }
+}
+
+// S3 Bucket Resource-Based Policy
+
+data "aws_iam_policy_document" "s3_bucket_policy" {
+  statement {
+    sid    = "DenyNonSSLTransport"
+    effect = "Deny"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions = ["s3:*"]
+    resources = [
+      aws_s3_bucket.homelab.arn,
+      "${aws_s3_bucket.homelab.arn}/*"
+    ]
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+
+  statement {
+    sid    = "AllowOnlyMainVMRole"
+    effect = "Deny"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions = ["s3:*"]
+    resources = [
+      aws_s3_bucket.homelab.arn,
+      "${aws_s3_bucket.homelab.arn}/*"
+    ]
+    condition {
+      test     = "StringNotEquals"
+      variable = "aws:PrincipalArn"
+      values = [
+        aws_iam_role.main_vm.arn,
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
   }
 }
