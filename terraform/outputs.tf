@@ -21,3 +21,13 @@ output "main_vm_private_ip" {
   description = "Main VM private IP"
   value       = aws_instance.main_vm.private_ip
 }
+
+output "s3_bucket_name" {
+  description = "S3 bucket name"
+  value       = aws_s3_bucket.homelab.id
+}
+
+output "s3_bucket_arn" {
+  description = "S3 bucket ARN"
+  value       = aws_s3_bucket.homelab.arn
+}
