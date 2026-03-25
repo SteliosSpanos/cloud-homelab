@@ -54,45 +54,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "homelab" {
 resource "aws_s3_bucket_policy" "homelab" {
   bucket = aws_s3_bucket.homelab.id
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "DenyNonSSLTransport"
-        Effect    = "Deny"
-        Principal = "*"
-        Action    = "s3:*"
-        Resource = [
-          aws_s3_bucket.homelab.arn,
-          "${aws_s3_bucket.homelab.arn}/*"
-        ]
-        Condition = {
-          Bool = {
-            "aws:SecureTransport" = "false"
-          }
-        }
-      },
-      {
-        Sid       = "AllowOnlyMainVMRole"
-        Effect    = "Deny"
-        Principal = "*"
-        Action    = "s3:*"
-        Resource = [
-          aws_s3_bucket.homelab.arn,
-          "${aws_s3_bucket.homelab.arn}/*"
-        ]
-        Condition = {
-          StringNotEquals = {
-            "aws:PrincipalArn" = [
-              aws_iam_role.main_vm.arn,
-              "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-            ]
-          }
-        }
-      }
-    ]
-  })
+  policy = data.aws_iam_policy_document.s3_bucket_policy.json
 }
+
 
 // VPC Endpoint
 
