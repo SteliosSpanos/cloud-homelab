@@ -2,9 +2,9 @@
 
 ## Overview
 
-Secure, cost-optimized AWS environment built with Terraform. The architecture uses a bastion host (jump box) for SSH access, a NAT instance instead of NAT Gateway for cost savings, defense-in-depth security with Security Groups and NACLs, and centralized log collection via CloudWatch Logs.
+Secure, cost-optimized AWS environment built with Terraform. The architecture uses a bastion host (jump box) for SSH access, a NAT instance instead of NAT Gateway for cost savings, defense-in-depth security with Security Groups and NACLs, and centralized log collection via CloudWatch Logs. It also includes private S3 storage accessed via a VPC Gateway Endpoint.
 
-**Stack:** Terraform · VPC (1 public + 2 private subnets) · 3 EC2 instances (Amazon Linux 2023) · Security Groups + NACLs · IAM least-privilege roles · KMS (single key for EBS encryption) · CloudWatch Logs (KMS-encrypted) · VPC Flow Logs · SSH ProxyJump automation
+**Stack:** Terraform · VPC (1 public + 2 private subnets) · 3 EC2 instances (Amazon Linux 2023) · S3 (encrypted, versioned) · VPC Gateway Endpoint (S3) · Security Groups + NACLs · IAM least-privilege roles · KMS (single key for EBS, S3, and CloudWatch) · CloudWatch Logs (KMS-encrypted) · VPC Flow Logs · SSH ProxyJump automation
 
 ## Architecture
 
@@ -51,13 +51,13 @@ Secure, cost-optimized AWS environment built with Terraform. The architecture us
 │  ┌───────────┼─────────────────────────────────────────────────────────────────────┐ │
 │  │           │       PRIVATE SUBNET 1 (10.0.2.0/24)                                │ │
 │  │           │                                                                     │ │
-│  │           ▼                                                                     │ │
-│  │  ┌──────────────────────┐                                                       │ │
-│  │  │       MAIN VM        │                                                       │ │
-│  │  │      (t3.micro)      │                                                       │ │
-│  │  │                      │                                                       │ │
-│  │  │ ┌──────────────────┐ │                                                       │ │
-│  │  │ │  Security Group  │ │                                                       │ │
+│  │           ▼                                      ┌──────────────────────┐       │ │
+│  │  ┌──────────────────────┐                        │ VPC Gateway Endpoint │       │ │
+│  │  │       MAIN VM        │                        │      (S3)            │       │ │
+│  │  │      (t3.micro)      │                        └──────────┬───────────┘       │ │
+│  │  │                      │                                   │                   │ │
+│  │  │ ┌──────────────────┐ │          HTTPS (Private)          │                   │ │
+│  │  │ │  Security Group  │ ├───────────────────────────────────┘                   │ │
 │  │  │ │ - SSH from JB    │ │                                                       │ │
 │  │  │ │ - ICMP from JB   │ │                                                       │ │
 │  │  │ └──────────────────┘ │                                                       │ │
@@ -65,30 +65,31 @@ Secure, cost-optimized AWS environment built with Terraform. The architecture us
 │  │  │  IAM Role:           │                                                       │ │
 │  │  │  - CloudWatch        │                                                       │ │
 │  │  │  - KMS Usage         │                                                       │ │
+│  │  │  - S3 Access         │                                                       │ │
 │  │  └──────────────────────┘                                                       │ │
 │  │                                                                                 │ │
 │  │  PRIVATE SUBNET 2 (10.0.3.0/24)                                                 │ │
 │  │  (Empty - for future expansion)                                                 │ │
-│  └─────────────────────────────────────────────────────────────────────────────────┘ │
-│                                                                                      │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐    │
-│  │                            SECURITY LAYERS                                   │    │
-│  │  Layer 1: Security Groups (Stateful, Instance-level)                         │    │
-│  │  Layer 2: Network ACLs (Stateless, Subnet-level)                             │    │
-│  │  Layer 3: IAM Roles (API-level access control)                               │    │
-│  └──────────────────────────────────────────────────────────────────────────────┘    │
+│  └───────────────────────────────────────────────────────────────────┬─────────────┘ │
+│                                                                      │               │
+│  ┌────────────────────────┐         ┌────────────────────────────────▼────────────┐  │
+│  │      S3 BUCKET         │◄────────┤         SECURITY LAYERS                     │  │
+│  │ (KMS Encrypted,        │         │ Layer 1: Security Groups (Stateful)         │  │
+│  │  Private, Versioned)   │         │ Layer 2: Network ACLs (Stateless)           │  │
+│  └────────────────────────┘         │ Layer 3: IAM Roles (API Access)             │  │
+│                                     └─────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**VPC:** 10.0.0.0/16 with three subnets, public (10.0.1.0/24), private 1 (10.0.2.0/24), and private 2 (10.0.3.0/24). VPC Flow Logs capture ALL traffic and ship to CloudWatch Logs.
+**VPC:** 10.0.0.0/16 with three subnets, public (10.0.1.0/24), private 1 (10.0.2.0/24), and private 2 (10.0.3.0/24). VPC Flow Logs capture ALL traffic and ship to CloudWatch Logs. A VPC Gateway Endpoint provides private access to S3.
 
 **Compute:** Three t3.micro instances using Amazon Linux 2023. All root volumes are KMS-encrypted and IMDSv2 is enforced. The jump box is the sole SSH entry point via its Elastic IP. The NAT instance routes outbound traffic from private subnets. The main VM has no public IP and is reached via ProxyJump.
 
-**Security:** Three-layer defense using stateful security groups, stateless NACLs, and IAM roles. Each instance is assigned a least-privilege role with scoped KMS permissions.
+**Security:** Three-layer defense using stateful security groups, stateless NACLs, and IAM roles. Each instance is assigned a least-privilege role with scoped KMS permissions. The Main VM has a specific IAM policy for S3 access.
 
 **Logging:** All instances ship system and setup logs to CloudWatch Logs via the CloudWatch Agent. VPC Flow Logs provide full network visibility. All log groups are encrypted with the project KMS key.
 
-**KMS:** A single shared KMS key (`alias/cloud-homelab`) handles EBS volume encryption and CloudWatch log group encryption. Key rotation is enabled with a 7-day deletion window.
+**KMS:** A single shared KMS key (`alias/cloud-homelab`) handles EBS volume encryption, S3 bucket-key encryption, and CloudWatch log group encryption. Key rotation is enabled.
 
 ## Project Structure
 
@@ -104,11 +105,13 @@ homelab/
     ├── security.tf        (Security Groups for all instances)
     ├── nacl.tf            (Public and Private NACLs)
     ├── compute.tf         (EC2: jump box, NAT, main VM; SSH key + local config)
-    ├── iam_compute.tf     (IAM roles and KMS usage policies for instances)
-    ├── iam_cloudwatch.tf  (IAM role and policy for VPC Flow Logs)
-    ├── kms.tf             (KMS key + alias for EBS and CloudWatch)
+    ├── s3.tf              (S3 bucket, versioning, policies, VPC Endpoint)
+    ├── iam_instances.tf   (IAM roles and policies for EC2 instances)
+    ├── iam_vpc.tf         (IAM role and policy for VPC Flow Logs)
+    ├── kms.tf             (KMS key + alias for EBS, S3 and CloudWatch)
     ├── cloudwatch.tf      (CloudWatch log groups for instances and VPC flow logs)
-    ├── data.tf            (Data sources: AMI, Availability Zones, External IP)
+    ├── data.tf            (Data sources: AMI, AZs, External IP, IAM policies)
+    ├── moved.tf           (Terraform state move blocks for refactoring)
     ├── templates/
     │   ├── userdata.tpl           (NAT setup + CloudWatch Agent)
     │   ├── userdata-jump-box.tpl  (Jump box init + CloudWatch Agent)
@@ -121,7 +124,16 @@ homelab/
 
 ### Network Architecture
 
-The VPC is segmented into one public and two private subnets. The public route table directs traffic to the Internet Gateway, while the private route table uses the NAT instance's network interface as the default gateway (0.0.0.0/0).
+The VPC is segmented into one public and two private subnets. The public route table directs traffic to the Internet Gateway, while the private route table uses the NAT instance's network interface as the default gateway (0.0.0.0/0) and includes a route for the S3 VPC Gateway Endpoint.
+
+### S3 Storage & Private Connectivity
+
+A secure S3 bucket is provisioned for data storage, featuring:
+
+- **Encryption:** Server-side encryption using the project's KMS key (SSE-KMS) with Bucket Keys enabled.
+- **Versioning:** Enabled to protect against accidental deletions.
+- **Access Control:** Public access is strictly blocked. Access is restricted via IAM roles and a Bucket Policy.
+- **VPC Endpoint:** A Gateway Endpoint allows the Main VM to communicate with S3 over the AWS internal network, avoiding the internet and NAT instance.
 
 ### NAT Instance
 
@@ -160,9 +172,10 @@ Each instance installs and configures the CloudWatch Agent via user data. Logs c
 | --------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Security Groups | Instance-level (stateful) | Jump box: SSH/ICMP from my IP only. NAT: HTTP/S and ICMP from private subnets, SSH/ICMP from jump box. Main VM: SSH/ICMP from jump box only.      |
 | NACLs           | Subnet-level (stateless)  | Public NACL: SSH from my IP, HTTP/S egress, ephemeral ports, ICMP. Private NACL: SSH from public subnet, ephemeral return traffic, HTTP/S egress. |
-| IAM Roles       | API-level                 | Instances: Scoped KMS usage (encrypt/decrypt EBS). VPC Flow Logs: Permissions to create and write to CloudWatch.                                  |
-| KMS             | Encryption                | Single key covers CloudWatch logs and EBS root volumes. Key rotation enabled.                                                                     |
+| IAM Roles       | API-level                 | Instances: Scoped KMS usage and CloudWatch logging. Main VM: Scoped S3 access. VPC Flow Logs: Permissions to write to CloudWatch.                 |
+| KMS             | Encryption                | Single key covers CloudWatch logs, EBS root volumes, and S3 objects. Key rotation enabled.                                                        |
 | IMDSv2          | Instance metadata         | `http_tokens = "required"` enforced on all EC2 instances to prevent SSRF-based metadata theft.                                                    |
+| S3 Security     | Data Protection           | Block Public Access enabled, Bucket Policy enforced, SSE-KMS encryption, and versioning enabled.                                                  |
 | Bastion Pattern | Access control            | Single SSH entry point via Jump Box. Private instances do not have public IPs and restrict SSH to the Jump Box security group.                    |
 | VPC Flow Logs   | Visibility                | ALL traffic logged to CloudWatch for audit and troubleshooting.                                                                                   |
 
@@ -173,6 +186,8 @@ Each instance installs and configures the CloudWatch Agent via user data. Logs c
 | 3× t3.micro EC2                | ~$22/month             |
 | 2× Elastic IPs (attached)      | $0 while running       |
 | KMS key                        | ~$1/month              |
+| S3 Storage                     | ~$0.023/GB             |
+| VPC S3 Endpoint                | FREE (Gateway type)    |
 | CloudWatch Logs (minimal data) | <$2/month              |
 | NAT Instance (vs. NAT Gateway) | Saves ~$30/month       |
 | **Total (24/7)**               | **~$25-30/month**      |
@@ -200,7 +215,7 @@ ssh -F terraform/.ssh/config main-vm
 ssh -F terraform/.ssh/config nat-instance
 ```
 
-Outputs include SSH connection commands and private/public IPs for all instances.
+Outputs include SSH connection commands, private/public IPs for all instances, and the S3 bucket name.
 
 ## License
 
