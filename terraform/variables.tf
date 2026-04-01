@@ -43,11 +43,13 @@ variable "instance_types" {
     jump_box = string
     nat      = string
     main_vm  = string
+    web_app  = string
   })
   default = {
     jump_box = "t3.micro"
     nat      = "t3.micro"
     main_vm  = "t3.micro"
+    web_app  = "t3.micro"
   }
   description = "EC2 instance types for each instance"
 }
@@ -56,4 +58,21 @@ variable "log_retention_days" {
   type        = number
   default     = 30
   description = "CloudWatch log retention in days"
+}
+
+variable "db_instance_class" {
+  type        = string
+  default     = "db.t3.micro"
+  description = "Instance class of RDS"
+}
+
+variable "db_name" {
+  type        = string
+  description = "Name of the RDS database"
+}
+
+variable "db_username" {
+  type        = string
+  sensitive   = true
+  description = "Master username for RDS database"
 }
