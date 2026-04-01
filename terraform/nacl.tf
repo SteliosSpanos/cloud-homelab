@@ -216,13 +216,13 @@ resource "aws_network_acl_rule" "private_inbound_postgres_from_public" {
   to_port        = 5432
 }
 
-resource "aws_network_acl_rule" "private_inbound_ephemeral_from_vpc" {
+resource "aws_network_acl_rule" "private_inbound_ephemeral_from_internet" {
   network_acl_id = aws_network_acl.private.id
   rule_number    = 130
   egress         = false
   protocol       = "tcp"
   rule_action    = "allow"
-  cidr_block     = var.vpc_cidr
+  cidr_block     = "0.0.0.0/0"
   from_port      = 1024
   to_port        = 65535
 }
