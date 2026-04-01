@@ -1,5 +1,5 @@
 /*
-    The 3 EC2 instances (Jump Box, NAT, Main), the key pair for SSH
+    The 4 EC2 instances (Jump Box, NAT, Main, Web App), the key pair for SSH
     and the SSH config file for proxy jump
 */
 
@@ -124,6 +124,50 @@ resource "aws_instance" "main_vm" {
 
   tags = {
     Name = "${var.project_name}-main-vm"
+  }
+}
+
+// Web App
+
+resource "aws_instance" "web_app" {
+  ami                    = data.aws_ami.amazon_linux_2023.id
+  instance_type          = var.instance_types.web_app
+  subnet_id              = aws_subnet.homelab_public_subnet.id
+  vpc_security_group_ids = [aws_security_group.web_app.id]
+  iam_instance_profile   = aws_iam_instance_profile.web_app.name
+  key_name               = aws_key_pair.homelab_key.key_name
+
+  metadata_options {
+    http_tokens = "required"
+  }
+
+  root_block_device {
+    encrypted  = true
+    kms_key_id = aws_kms_key.homelab.arn
+  }
+
+  user_data = templatefile("${path.module}/templates/userdata-web-app.tpl", {
+    log_group_name = aws_cloudwatch_log_group.web_app.name
+    region         = var.region
+    db_secret_arn  = aws_db_instance.postgres.master_user_secret[0].secret_arn
+    db_host        = aws_db_instance.postgres.address
+    db_name        = aws_db_instance.postgres.db_name
+  })
+  user_data_replace_on_change = true
+
+  tags = {
+    Name = "${var.project_name}-web-app"
+  }
+}
+
+resource "aws_eip" "web_app" {
+  domain   = "vpc"
+  instance = aws_instance.web_app.id
+
+  depends_on = [aws_internet_gateway.homelab_igw]
+
+  tags = {
+    Name = "${var.project_name}-web-app-eip"
   }
 }
 
