@@ -3,6 +3,7 @@ locals {
     jump_box     = aws_cloudwatch_log_group.jump_box.arn
     nat_instance = aws_cloudwatch_log_group.nat_instance.arn
     main_vm      = aws_cloudwatch_log_group.main_vm.arn
+    web_app      = aws_cloudwatch_log_group.web_app.arn
   }
 }
 
