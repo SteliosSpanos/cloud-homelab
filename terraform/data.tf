@@ -309,7 +309,8 @@ data "aws_iam_policy_document" "kms_key_policy" {
       identifiers = [
         aws_iam_role.jump_box.arn,
         aws_iam_role.nat_instance.arn,
-        aws_iam_role.main_vm.arn
+        aws_iam_role.main_vm.arn,
+        aws_iam_role.web_app.arn
       ]
     }
     actions = [
@@ -330,7 +331,8 @@ data "aws_iam_policy_document" "kms_key_policy" {
       identifiers = [
         aws_iam_role.jump_box.arn,
         aws_iam_role.nat_instance.arn,
-        aws_iam_role.main_vm.arn
+        aws_iam_role.main_vm.arn,
+        aws_iam_role.web_app.arn
       ]
     }
     actions   = ["kms:CreateGrant"]
