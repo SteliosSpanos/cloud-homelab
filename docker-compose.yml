@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: homelab
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: ./app
+    ports:
+      - "8000:80"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=homelab
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - AWS_REGION=us-east-1
+    depends_on:
+      db:
+        condition: service_healthy

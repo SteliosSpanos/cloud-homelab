@@ -197,7 +197,7 @@ data "aws_iam_policy_document" "s3_endpoint_policy" {
   }
 }
 
-// S3 Bucket Resource-Based Policy
+// Web App Secrets Manager Policy
 
 data "aws_iam_policy_document" "secrets_manager_access" {
   statement {
@@ -207,7 +207,19 @@ data "aws_iam_policy_document" "secrets_manager_access" {
     ]
     resources = [aws_db_instance.postgres.master_user_secret[0].secret_arn]
   }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt"
+    ]
+    resources = [
+      aws_kms_key.homelab.arn
+    ]
+  }
 }
+
+// S3 Bucket Resource-Based Policy
 
 data "aws_iam_policy_document" "s3_bucket_policy" {
   statement {
