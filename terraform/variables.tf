@@ -82,3 +82,9 @@ variable "db_username" {
   sensitive   = true
   description = "Master username for RDS database"
 }
+
+variable "github_repo_url" {
+  type        = string
+  description = "The URL of the GitHub repository containing the application code"
+  default     = "https://github.com/SteliosSpanos/cloud-homelab.git"
+}
