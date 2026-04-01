@@ -148,9 +148,31 @@ resource "aws_network_acl_rule" "public_outbound_icmp_to_vpc" {
   icmp_code      = -1
 }
 
-resource "aws_network_acl_rule" "public_outbound_ephemeral" {
+resource "aws_network_acl_rule" "public_outbound_postgres_to_private_1" {
   network_acl_id = aws_network_acl.public.id
   rule_number    = 150
+  egress         = true
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = aws_subnet.homelab_private_subnet_1.cidr_block
+  from_port      = 5432
+  to_port        = 5432
+}
+
+resource "aws_network_acl_rule" "public_outbound_postgres_to_private_2" {
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 160
+  egress         = true
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = aws_subnet.homelab_private_subnet_2.cidr_block
+  from_port      = 5432
+  to_port        = 5432
+}
+
+resource "aws_network_acl_rule" "public_outbound_ephemeral" {
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 170
   egress         = true
   protocol       = "tcp"
   rule_action    = "allow"
@@ -183,13 +205,24 @@ resource "aws_network_acl_rule" "private_inbound_icmp_from_public" {
   icmp_code      = -1
 }
 
-resource "aws_network_acl_rule" "private_inbound_ephemeral_from_internet" {
+resource "aws_network_acl_rule" "private_inbound_postgres_from_public" {
   network_acl_id = aws_network_acl.private.id
   rule_number    = 120
   egress         = false
   protocol       = "tcp"
   rule_action    = "allow"
-  cidr_block     = "0.0.0.0/0"
+  cidr_block     = aws_subnet.homelab_public_subnet.cidr_block
+  from_port      = 5432
+  to_port        = 5432
+}
+
+resource "aws_network_acl_rule" "private_inbound_ephemeral_from_vpc" {
+  network_acl_id = aws_network_acl.private.id
+  rule_number    = 130
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = var.vpc_cidr
   from_port      = 1024
   to_port        = 65535
 }
