@@ -36,9 +36,9 @@ CWEOF
     -s \
     -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
    
-# 2. Install Docker
+# 2. Install Docker & Git
 dnf update -y
-dnf install -y docker
+dnf install -y docker git
 systemctl enable --now docker
    
 # 3. Create the app directory and .env file
@@ -52,3 +52,15 @@ DB_HOST=${db_host}
 DB_PORT=5432
 DB_NAME=${db_name}
 EOF
+
+# 4. Clone and Build
+echo "Cloning repo: ${github_url}"
+# Note: This expects a public repo or valid SSH key. In a real scenario, use Secrets Manager for a deploy key.
+git clone ${github_url} /home/ec2-user/repo
+cp -r /home/ec2-user/repo/app/* .
+
+echo "Building and starting container"
+docker build -t homelab-web-app .
+docker run -d --name web-app --restart always -p 80:80 --env-file .env homelab-web-app
+
+echo "=== Web App Setup Finished at $(date) ==="
