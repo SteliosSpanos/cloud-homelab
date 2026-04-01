@@ -4,7 +4,7 @@ import boto3
 from fastapi import FastAPI, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy import Column, Integer, String, create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic_settings import BaseSettings
@@ -47,7 +47,8 @@ def get_db_credentials():
 # --- DATABASE SETUP ---
 
 creds = get_db_credentials()
-DATABASE_URL = f"postgresql://{creds['username']}:{creds['password']}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
+# Force SSL since RDS is configured with rds.force_ssl=1
+DATABASE_URL = f"postgresql://{creds['username']}:{creds['password']}@{settings.db_host}:{settings.db_port}/{settings.db_name}?sslmode=require"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -60,7 +61,10 @@ class Item(Base):
     description = Column(String)
 
 # Create tables
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"CRITICAL: Failed to create database tables: {e}")
 
 # --- FASTAPI APP ---
 
@@ -77,8 +81,11 @@ def get_db():
 
 @app.get("/", response_class=HTMLResponse)
 async def read_items(request: Request, db: Session = Depends(get_db)):
-    items = db.query(Item).all()
-    return templates.TemplateResponse("index.html", {"request": request, "items": items})
+    try:
+        items = db.query(Item).all()
+        return templates.TemplateResponse("index.html", {"request": request, "items": items})
+    except Exception as e:
+        return HTMLResponse(content=f"Error connecting to database: {str(e)}", status_code=500)
 
 @app.post("/add")
 async def add_item(name: str = Form(...), description: str = Form(...), db: Session = Depends(get_db)):
@@ -88,5 +95,10 @@ async def add_item(name: str = Form(...), description: str = Form(...), db: Sess
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+def health_check(db: Session = Depends(get_db)):
+    try:
+        # Simple query to check DB health
+        db.execute(text("SELECT 1"))
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": str(e)}
