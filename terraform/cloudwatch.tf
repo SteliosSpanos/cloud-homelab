@@ -32,6 +32,16 @@ resource "aws_cloudwatch_log_group" "main_vm" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "web_app" {
+  name              = "/${var.project_name}/web-app"
+  retention_in_days = var.log_retention_days
+  kms_key_id        = aws_kms_key.homelab.arn
+
+  tags = {
+    Name = "${var.project_name}-web-app-logs"
+  }
+}
+
 // VPC Flow Logs
 
 resource "aws_cloudwatch_log_group" "vpc_flow_log" {
