@@ -30,7 +30,7 @@ output "web_app_public_ip" {
 
 output "web_app_private_ip" {
   description = "Web App private IP"
-  value       = aws_istance.web_app.private_ip
+  value       = aws_instance.web_app.private_ip
 }
 
 output "s3_bucket_name" {
