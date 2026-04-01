@@ -240,3 +240,104 @@ data "aws_iam_policy_document" "s3_bucket_policy" {
     }
   }
 }
+
+// KMS Resource-Based Policy
+
+data "aws_iam_policy_document" "kms_key_policy" {
+  statement {
+    sid    = "KeyAdministrator"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowCloudWatchLogs"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["logs.${var.region}.amazonaws.com"]
+    }
+    actions = [
+      "kms:Decrypt",
+      "kms:Encrypt",
+      "kms:GenerateDataKey",
+      "kms:DescribeKey",
+      "kms:ReEncryptTo"
+    ]
+    resources = ["*"]
+    condition {
+      test     = "ArnLike"
+      variable = "kms:EncryptionContext:aws:logs:arn"
+      values   = ["arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/${var.project_name}*"]
+    }
+  }
+
+  statement {
+    sid    = "AllowRDSKeyUsage"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    actions = [
+      "kms:CreateGrant",
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:GenerateDataKey",
+      "kms:ReEncryptFrom",
+      "kms:ReEncryptTo"
+    ]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["rds.${var.region}.amazonaws.com"]
+    }
+  }
+
+  statement {
+    sid    = "AllowEC2Encryption"
+    effect = "Allow"
+    principals {
+      type = "AWS"
+      identifiers = [
+        aws_iam_role.jump_box.arn,
+        aws_iam_role.nat_instance.arn,
+        aws_iam_role.main_vm.arn
+      ]
+    }
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowAttachmentOfPersistentVolumes"
+    effect = "Allow"
+    principals {
+      type = "AWS"
+      identifiers = [
+        aws_iam_role.jump_box.arn,
+        aws_iam_role.nat_instance.arn,
+        aws_iam_role.main_vm.arn
+      ]
+    }
+    actions   = ["kms:CreateGrant"]
+    resources = ["*"]
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+    }
+  }
+}
