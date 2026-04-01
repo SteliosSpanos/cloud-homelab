@@ -7,7 +7,7 @@
 
 resource "aws_key_pair" "homelab_key" {
   key_name   = "${var.project_name}-key"
-  public_key = file("${path.module}/.ssh/cloud-homelab-key.pem.pub")
+  public_key = file("${path.module}/${var.public_key_path}")
 
   tags = {
     Name = "${var.project_name}-key"
