@@ -118,6 +118,18 @@ resource "aws_iam_role_policy_attachment" "web_app_cloudwatch" {
   policy_arn = aws_iam_policy.cloudwatch["web_app"].arn
 }
 
+resource "aws_iam_policy" "secrets_manager_access" {
+  name        = "${var.project_name}-secrets-manager-access"
+  description = "Allow web app to read RDS secrets"
+
+  policy = data.aws_iam_policy_document.secrets_manager_access.json
+}
+
+resource "aws_iam_role_policy_attachment" "web_app_secrets" {
+  role       = aws_iam_role.web_app.name
+  policy_arn = aws_iam_policy.secrets_manager_access.arn
+}
+
 resource "aws_iam_instance_profile" "web_app" {
   name = "${var.project_name}-web-app-profile"
   role = aws_iam_role.web_app.name
