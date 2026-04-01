@@ -22,6 +22,16 @@ output "main_vm_private_ip" {
   value       = aws_instance.main_vm.private_ip
 }
 
+output "web_app_public_ip" {
+  description = "Web App public IP"
+  value       = aws_instance.web_app.public_ip
+}
+
+output "web_app_private_ip" {
+  description = "Web App private IP"
+  value       = aws_istance.web_app.private_ip
+}
+
 output "s3_bucket_name" {
   description = "S3 bucket name"
   value       = aws_s3_bucket.homelab.id
@@ -30,4 +40,9 @@ output "s3_bucket_name" {
 output "s3_bucket_arn" {
   description = "S3 bucket ARN"
   value       = aws_s3_bucket.homelab.arn
+}
+
+output "db_endpoint" {
+  description = "RDS PostgresSQL endpoint"
+  value       = aws_db_instance.postgres.endpoint
 }
