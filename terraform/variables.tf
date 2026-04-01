@@ -14,6 +14,12 @@ variable "project_name" {
   description = "Project name for resource naming"
 }
 
+variable "public_key_path" {
+  type        = string
+  default     = ".ssh/cloud-homelab-key.pem.pub"
+  description = "Path to the public key file"
+}
+
 variable "vpc_cidr" {
   type        = string
   default     = "10.0.0.0/16"
