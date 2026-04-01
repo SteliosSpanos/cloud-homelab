@@ -4,6 +4,7 @@ output "ssh_commands" {
     jump_box     = "ssh -F .ssh/config jump-box"
     nat_instance = "ssh -F .ssh/config nat-instance"
     main_vm      = "ssh -F .ssh/config main-vm"
+    web_app      = "ssh -F .ssh/config web-app"
   }
 }
 
