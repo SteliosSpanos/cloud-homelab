@@ -1,5 +1,5 @@
 /*
-    Security groups for the 3 EC2 instances
+    Security groups for the 4 EC2 instances and the RDS database
 */
 
 // NAT Instance
@@ -129,5 +129,83 @@ resource "aws_security_group" "main_vm" {
 
   tags = {
     Name = "${var.project_name}-main-vm-sg"
+  }
+}
+
+// Web App
+
+resource "aws_security_group" "web_app" {
+  name        = "${var.project_name}-web-app-sg"
+  description = "Security group for the web app instance"
+  vpc_id      = aws_vpc.homelab_vpc.id
+
+  ingress {
+    description     = "SSH from jump box"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.jump_box.id]
+  }
+
+  ingress {
+    description     = "ICMP (ping) from jump box"
+    from_port       = -1
+    to_port         = -1
+    protocol        = "icmp"
+    security_groups = [aws_security_group.jump_box.id]
+  }
+
+  ingress {
+    description = "HTTP from anywhere"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS from anywhere"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "All outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-web-app-sg"
+  }
+}
+
+resource "aws_security_group" "postgres" {
+  name        = "${var.project_name}-postgres-sg"
+  description = "Security group for PostgreSQL database"
+  vpc_id      = aws_vpc.homelab_vpc.id
+
+  ingress {
+    description     = "Access from web app"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.web_app.id]
+  }
+
+  egress {
+    description = "Allow outbound traffic within VPC only"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  tags = {
+    Name = "${var.project_name}-postgres-sg"
   }
 }
