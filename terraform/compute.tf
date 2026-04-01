@@ -152,6 +152,7 @@ resource "aws_instance" "web_app" {
     db_secret_arn  = aws_db_instance.postgres.master_user_secret[0].secret_arn
     db_host        = aws_db_instance.postgres.address
     db_name        = aws_db_instance.postgres.db_name
+    github_url     = var.github_repo_url
   })
   user_data_replace_on_change = true
 
@@ -201,12 +202,12 @@ resource "local_file" "ssh_config" {
         UserKnownHostsFile ${path.module}/.ssh/known_hosts
 
     Host web-app
-        HostName ${aws_instance.main_vm.private_ip}
+        HostName ${aws_instance.web_app.private_ip}
         User ec2-user
         IdentityFile ${abspath("${path.module}/.ssh/${var.project_name}-key.pem")}
         ProxyJump jump-box
         StrictHostKeyChecking accept-new
-        UserKnowsHostsFile ${path.module}/.ssh/known_hosts
+        UserKnownHostsFile ${path.module}/.ssh/known_hosts
 
   EOF
 
