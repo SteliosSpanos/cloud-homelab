@@ -100,3 +100,25 @@ resource "aws_iam_instance_profile" "main_vm" {
   name = "${var.project_name}-main-vm-profile"
   role = aws_iam_role.main_vm.name
 }
+
+// Web App
+
+resource "aws_iam_role" "web_app" {
+  name               = "${var.project_name}-web-app-role"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "web_app_kms" {
+  role       = aws_iam_role.web_app.name
+  policy_arn = aws_iam_policy.kms_usage.arn
+}
+
+resource "aws_iam_role_policy_attachment" "web_app_cloudwatch" {
+  role       = aws_iam_role.web_app.name
+  policy_arn = aws_iam_policy.cloudwatch["web_app"].arn
+}
+
+resource "aws_iam_instance_profile" "web_app" {
+  name = "${var.project_name}-web-app-profile"
+  role = aws_iam_role.web_app.name
+}
