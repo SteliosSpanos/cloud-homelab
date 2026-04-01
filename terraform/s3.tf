@@ -55,6 +55,14 @@ resource "aws_s3_bucket_policy" "homelab" {
   bucket = aws_s3_bucket.homelab.id
 
   policy = data.aws_iam_policy_document.s3_bucket_policy.json
+
+  # Ensure the policy is applied last so it doesn't block other configurations
+  depends_on = [
+    aws_s3_bucket_versioning.homelab,
+    aws_s3_bucket_server_side_encryption_configuration.homelab,
+    aws_s3_bucket_public_access_block.homelab,
+    aws_s3_bucket_lifecycle_configuration.homelab
+  ]
 }
 
 

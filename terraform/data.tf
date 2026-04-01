@@ -258,7 +258,8 @@ data "aws_iam_policy_document" "s3_bucket_policy" {
       variable = "aws:PrincipalArn"
       values = [
         aws_iam_role.main_vm.arn,
-        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root",
+        data.aws_caller_identity.current.arn
       ]
     }
   }
