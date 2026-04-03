@@ -1,6 +1,14 @@
 terraform {
   required_version = ">= 1.5, < 2.0"
 
+  backend "s3" {
+    bucket         = "cloud-homelab-terraform-state-487322974754"
+    key            = "terraform.tfstate"
+    region         = "eu-central-1"
+    dynamodb_table = "cloud-homelab-terraform-locks"
+    encrypt        = true
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
