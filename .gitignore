@@ -10,3 +10,5 @@ terraform.tfvars
 *.pub
 
 *.log
+
+__pycache__
